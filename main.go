@@ -11,20 +11,14 @@ import (
   "time"
   "errors"
   "encoding/json"
+  "mongo-go/models"
 )
-
-type Person struct {
-  ID primitive.ObjectID `json:"_id,omitempty" bson:"_id,omitempty"`
-  Firstname string      `json:"firstname,omitempty" bson:"firstname,omitempty"`
-  Lastname string       `json:"lastname,omitempty" bson:"lastname,omitempty"`
-  Address string       `json:"address,omitempty" bson:"address,omitempty"`
-}
 
 var client *mongo.Client
 
 func CreateUser(response http.ResponseWriter, request *http.Request){
   response.Header().Add("Content-Type","application/json")
-  var person Person
+  var person user.Person
 
   json.NewDecoder(request.Body).Decode(&person)
   err := validate(person)
@@ -44,7 +38,7 @@ func CreateUser(response http.ResponseWriter, request *http.Request){
 
 func GetUsers(response http.ResponseWriter, request *http.Request){
   response.Header().Add("Content-Type", "application/json")
-  var people []Person
+  var people []user.Person
   collection := client.Database("test").Collection("users")
   ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
   curser, err := collection.Find(ctx, bson.M{})
@@ -58,7 +52,7 @@ func GetUsers(response http.ResponseWriter, request *http.Request){
   defer curser.Close(ctx)
 
   for curser.Next(ctx){
-    var person Person
+    var person user.Person
     curser.Decode(&person)
     people = append(people, person)
   }
@@ -75,10 +69,10 @@ func GetUserById(response http.ResponseWriter, request *http.Request){
   response.Header().Add("Content-Type", "application/json")
   params := mux.Vars(request)
   id, _ := primitive.ObjectIDFromHex(params["id"])
-  var person Person
+  var person user.Person
   collection := client.Database("test").Collection("users")
   ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-  err := collection.FindOne(ctx, Person{ID: id}).Decode(&person)
+  err := collection.FindOne(ctx, user.Person{ID: id}).Decode(&person)
 
   if err != nil {
     response.WriteHeader(http.StatusInternalServerError)
@@ -114,7 +108,7 @@ func DeleteUserById(response http.ResponseWriter, request *http.Request) {
   return
 }
 
-func validate(data Person) error{
+func validate(data user.Person) error{
   if data.Firstname == "" {
     return errors.New("firstname is required")
   }else if data.Lastname == "" {
